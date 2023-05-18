@@ -23,7 +23,7 @@ WARN	= -Wall -Wshadow -Wpointer-arith -Wcast-qual -Wwrite-strings \
 	-Wunused -Wcomment -Wswitch
 CC	= gcc -ansi -ggdb $(WARN)
 #CC	= cc
-CFLAGS	= $(DEFS) -O2 -m486 -fomit-frame-pointer 
+CFLAGS	= $(DEFS) -O2 -fomit-frame-pointer 
 
 ##  If you have -DUSE_TERMCAP, set this as appropriate:
 #LDFLAGS = -ltermlib
