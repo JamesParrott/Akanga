@@ -20,8 +20,8 @@ SHELL=/bin/sh
 
 # Use an ANSI compiler (or at least one that groks prototypes and void *):
 CC=gcc
-##CFLAGS=-ggdb -DWITH_LOCKING -DWITH_TMPFILE -DWITH_VARSUP -O2 -fomit-frame-pointer -DSYSVR4
-CFLAGS = -ggdb -DWITH_LOCKING -DWITH_TMPFILE -DWITH_VARSUP -DWITH_EXPR -DWITH_MISC -O2 -DSYSVR4
+##CFLAGS=-ggdb -DWITH_LOCKING -DWITH_TMPFILE -DWITH_VARSUP -O2 -m486 -fomit-frame-pointer -DSYSVR4
+CFLAGS = -ggdb -DWITH_LOCKING -DWITH_TMPFILE -DWITH_VARSUP -DWITH_EXPR -DWITH_MISC -O2 -m486 -DSYSVR4
 LDFLAGS = libedit.a
 
 # You may substitute "bison -y" for yacc. (You want to choose the one that
