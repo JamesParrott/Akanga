@@ -1,0 +1,281 @@
+#!/bin/akanga
+#
+# netuser [<options>] <port> ...
+#
+#	Aehnlich wie `fuser(1) -n' - anzeigen aller Prozesse die <port>
+#	belegen.
+#
+#	Optionen:
+#	  -a			Anzeige enthaelt Serverprozesse im listen(3)
+#				State.
+#	  -k <signal>		An jeden Prozess das Signal <signal> schicken.
+#	  -l <pidlist>		Die Anzeige beschraenkt sich auf die
+#				  angegebenen Prozesse (Kommagetrennt).
+#	  -n			Portnummern in der Ausgabe durch Namen
+#				ersetzen.
+#	  -p			Gibt nur die Liste der Portnummern aus. Z.B.
+#				  netuser -ps
+#	  -s			Nur Anzeige der Serverports (listen Modus).
+#	  -u			UDP statt TCP verwenden.
+#
+
+initvars '' listall signal serveronly printports nameports
+socklist = /proc/net/tcp
+
+parseopt '*' ak:l:npsu $*
+while (~ $1 -*) {
+	switch ($1) {
+	case -a
+		listall = yes
+		shift
+
+	case -k
+		signal = $2
+		shift 2
+
+	case -l
+		pidlist = ``($ifs ,) { echo $2 }
+		shift 2
+
+	case -n
+		nameports = yes
+		shift
+
+	case -p
+		printports = yes
+		shift
+
+	case -s
+		serveronly = yes
+		listall = yes
+		shift
+
+	case -u
+		socklist = /proc/net/udp
+		shift
+
+	case - --
+		shift
+		break
+		
+	case *
+		echo $0: unknown option: -$1
+		exit 1
+		}
+	}
+
+if (! ~ $#* 0) {
+	portlist = $*
+} else {
+	portlist = `{ cat $socklist |
+		      awk '
+			BEGIN {
+				HEX = "0123456789ABCDEF";
+				}
+
+			function getportno(s) {
+				s = toupper(s);
+				p = 0;
+				for (i=1; i<=length(s); i++) {
+					p = p * 16 + (index(HEX, substr(s, i, 1)) - 1);
+					}
+				return (p);
+				}
+		      
+			/./ {
+		      		split($2, l, ":");
+				port = l[2]
+				if (port != ""  &&  ! (port in seen)) {
+					seen[port] = 1;
+					print getportno(port);
+					}
+				}'
+		      }
+	}
+
+if (~ $#portlist 0)
+	exit 0
+
+
+list = `{ cat $socklist |
+	awk '
+		function getipno(s) {
+			s = toupper(s);
+			a = "";
+			for (i=1; i<=7; i += 2) {
+				b = (index(HEX, substr(s, i, 1)) - 1) * 16 + (index(HEX, substr(s, i+1, 1)) - 1);
+				a = b (a == ""? "": ".") a;
+				}
+			return (a);
+			}
+
+		function getportno(s) {
+			s = toupper(s);
+			p = 0;
+			for (i=1; i<=length(s); i++) {
+				p = p * 16 + (index(HEX, substr(s, i, 1)) - 1);
+				}
+			return (p);
+			}
+			
+		BEGIN {
+			HEX = "0123456789ABCDEF";
+			for (i=1; i<ARGC; i++) {
+				hex = sprintf ("%04X", ARGV[i])
+				port[hex] = ARGV[i];
+				ARGV[i] = "";
+				}
+			}
+
+		/./ {
+			local = $2;
+			sub(/^.*:/, "", local);
+			if (local in port) {
+				split($3, r, ":");
+				print port[local], $NF, getipno(r[1]) ":" getportno(r[2]);
+				}
+			}' $portlist
+	}
+
+
+while (! ~ $#list 0 1 2) {
+	if (~ $serveronly yes  &&  ! ~ $list(3) *:0) {
+		shift list 3
+	} else if (~ $listall ''  &&  ~ $list(3) *:0) {
+		shift list 3
+	} else {
+		namelist = ($namelist $list(1))
+		inodelist = ($inodelist '[0000]:' ^ $list(2))
+		peerlist = ($peerlist $list(3))
+		shift list 3
+		}
+	}
+
+if (~ $#inodelist 0) {
+	exit 0
+} else if (~ $printports yes) {
+	echo $namelist | {
+		if (~ $nameports '') {
+			cat -
+		} else {
+			awk '
+				BEGIN {
+					FILE = "/etc/services"
+					while (getline <FILE > 0) {
+						sub(/\/.*$/, "", $2);
+						service[$2] = $1
+						}
+						
+					close(FILE);
+					}
+
+				/./ {
+					for (i=1; i<=NF; i++) {
+						if ($i in seen) {
+							$i = ""
+							continue;
+							}
+
+						seen[$i] = 1
+						if ($i in service) {
+							$i = service[$i]
+							}
+						}
+
+					gsub(/[ \t]+/, " ");
+					print $0
+					}'
+			}
+		}
+	exit 0
+	}
+
+indexlist = `{ expr 'seq(1, #inodelist, 1)' }
+kpid = ()
+
+if (~ $#pidlist 0) {
+	filelist = `{ echo /proc/[1-9]*/fd/* }
+} else {
+	for (p in $pidlist) {
+		filelist = ($filelist `{ echo /proc/$p/fd/* })
+		}
+	}
+
+
+{ while (! ~ $#filelist 0) {
+	fd = $filelist(1)
+	shift filelist
+
+	if (! ~ $fd /proc/$pid/fd/*) {
+		let 'fdnode = stat("-u", fd)'
+		for (i in $indexlist) {
+			if (let 'fdnode ^== inodelist(i)') {
+				data = `{ echo $fd | awk '{ sub(/\/[^\/]*$/, ""); dir = $0;
+							    pid = substr($0, 7); sub(/\/.*$/, "", pid);
+							    print pid, dir;
+							    exit }' }
+				process = $data(1)
+				dir = $data(2) ^ /
+				
+				cmd = `{ cat $dir ^ '../cmdline' }
+				let 'uid = stat("-o", dir ^ "..")'
+				echo $namelist($i) $process $uid $peerlist($i) $cmd
+
+				kpid = ($kpid $process)
+				}
+			}
+		}
+	}
+
+  if (! ~ $signal ''  &&  ! ~ $#kpid 0) {
+  	pidlist = `{ echo $kpid |
+		     awk '{ for (i=1; i<=NF; i++) {
+		     		if (! ($i in seen)) {
+					seen[$i] = 1;
+					print $i
+					}
+		     		}
+			}'
+		     }
+
+	kill -$signal $pidlist
+  	}
+  } |
+awk '
+	BEGIN {
+		nameports = ARGV[1]; ARGV[1] = "";
+		if (nameports != "") {
+			FILE = "/etc/services";
+			while (getline <FILE > 0) {
+				sub(/\/.*/, "", $2);
+				service[$2] = $1
+				}
+			close(FILE);
+			}
+		
+		FS = ":";
+		FILE = "/etc/passwd";
+		while (getline <FILE > 0) {
+			user[$3] = $1
+			}
+		close(FILE);
+
+		FS = " ";
+		}
+
+	/./ {
+		if (seen[$0])		# Prozesszeilen kommen mehrfach pro inode
+			next;
+
+		seen[$0] = 1;
+		if ($3 in user)
+			$3 = user[$3];
+
+		if ($1 in service)
+			$1 = service[$1];
+
+		print
+		}' $nameports
+
+exit 0
+

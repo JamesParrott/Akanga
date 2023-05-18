@@ -1,0 +1,70 @@
+.de ES
+.sp
+.in +0.5i
+..
+.de EE
+.in -0.5i
+.sp
+..
+.de EX
+.sp
+.in +0.5i
+\\$1
+.in -0.5i
+.sp
+..
+.TH MANCC 1 "16 May 1999"
+.SH NAME
+mancc \- manual page compiler
+.SH SYNOPSIS
+\fBmancc\fR [\fIoptions\fR] \fIfile\fR \fI...\fR
+.SH DESCRIPTION
+.I mancc
+is a \fIman2html\fR(1) frontend, calling the converter for each \fIfile\fR
+to produce a set of HTML files referencing each other if such references
+appear in the manual page.
+\fImancc\fR can also maintain a list of source files (see option \fB-l\fR).
+.SH OPTIONS
+The following options are available:
+.TP
+.B \-a
+recompile all source files found in \fI.mancc\fR.
+This is equivalent to specifying \fB-rf\fR.
+.TP
+.B \-c
+clear the \fI.mancc\fR filelist before compiling the \fIfiles\fR from
+the command line.
+.TP
+.B \-f
+ignore the file's timestamp when recompiling the files from \fI.mancc\fR
+with \fB-r\fR.
+.TP
+.B \-l
+store the source files in the file \fI.mancc\fR in the output directory.
+.TP
+.B \-m
+if a manual page file is not found try to use the system's manpage.
+.TP
+\fB-o\fR \fIoutputdir\fR
+store the HTML files in \fIoutputdir\fR instead of the current directory.
+.TP
+.B \-r
+recompile the source file found in \fI.mancc\fR.
+.TP
+.B \-u
+compile \fIfile\fR only if the corresponding HTML does not exist or the
+source file is newer.
+.PP
+.SH EXAMPLES
+Read the following examples in a sequence:
+.EX "mancc -l mancc.1 man2html.1"
+This compiles HTML files from the two manpages linking references from
+\fImancc\fR(1) to \fIman2html\fR(1) and vice versa.
+.EX "mancc -lm whatis.1"
+This adds the system's manpage for \fIwhatis\fR(1) to the set of HTML files and
+.EX "mancc -la"
+recompiles the manpages to create links for references to \fIwhatis\fR(1)
+too.
+.SH "SEE ALSO"
+.IR man2html (1).
+

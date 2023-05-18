@@ -1,0 +1,40 @@
+#!/usr/bin/gawk -f
+#
+
+BEGIN {
+	srand(systime());
+
+	PWDLEN   = 4;
+	if (ARGV[1] != "") {
+		PWDLEN = ARGV[1];
+		ARGV[1] = "";
+		if (PWDLEN < 3)
+			PWDLEN = 4;
+		}
+		
+	LETTERS  = split("b c d f g h j k l m n p q r s t v w x y z st ng nt qu qw sk ks", ALPHABET, " ");
+	VOCALS   = "aeiouaeiouuioae";
+	}
+
+/./ {
+	pwd = ""
+	for (i=0; i<PWDLEN; i++) {
+		dummy = rand();
+		
+		k = int(rand() * (LETTERS - 1));
+		c = ALPHABET[k + 1];
+		pwd = pwd c;
+
+		k = int(rand() * (length(VOCALS) - 1));
+		c = substr(VOCALS, k + 1, 1);
+		pwd = pwd c;
+		}
+
+	k = rand() * 100
+	pwd = pwd sprintf ("%02d", k);
+
+	if ($1 == "#")
+		print pwd
+	else
+		print $1 "\t" pwd
+	}

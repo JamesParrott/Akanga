@@ -1,0 +1,169 @@
+#!/bin/akanga
+#
+# fileuser [<options>] <filename> ...
+#
+#	Aehnlich wie fuser(1) - zeigt alle Prozesse an die <filename>
+#	geoeffnet haben.
+#
+#	Optionen:
+#	  -k <signal>		schicke an jeden Prozess das Signal <signal>.
+#
+
+initvars '' signal echolist
+parseopt '*' adek:orx $*
+while (~ $1 -*) {
+	switch ($1) {
+	case -a
+		echolist = (/proc/[1-9]*/fd/* /proc/[1-9]*/exe /proc/[1-9]*/root /proc/[1-9]*/cwd)
+		shift
+
+	case -d
+		echolist = /proc/[1-9]*/cwd
+		shift
+
+	case -e
+		echolist = /proc/[1-9]*/exe
+		shift
+
+	case -k
+		signal = $2
+		shift 2
+
+	case -o
+		echolist = /proc/[1-9]*/fd/*
+		shift
+
+	case -r
+		echolist = /proc/[1-9]*/root
+		shift
+
+	case -x
+		echolist = (/proc/[1-9]*/fd/* /proc/[1-9]*/exe)
+		shift
+
+	case - --
+		shift
+		break;
+
+	case *
+		echo $0: unknown option: -$1
+		exit 1
+		}
+	}
+	
+if (~ $1 ()) {
+	echo usage: $0 '<filename> ...' >[1=2]
+	exit 1
+	}
+
+error = 0
+while (! ~ $#* 0) {
+	filename = $1
+	shift 1;
+
+	if (! let 'test("-e", filename)') {
+		echo $0: no such file or directory: $filename
+		error = 1
+	} else if (let '(inode = stat("-u", filename)) == -1') {
+		echo $0: 'can''t get inode:' $filename
+		error = 1
+	} else {
+		namelist = ($(namelist) $filename)
+		inodelist = ($(inodelist) $inode)
+		}
+	}
+
+if (~ $#namelist 0  &&  ! ~ $error 0)
+	exit $error
+	
+indexlist = `{ expr 'seq(1, #inodelist, 1)' }
+~ $echolist ''  &&  echolist = (/proc/[1-9]*/fd/*)
+filelist = $echolist
+#echo $#filelist >[1=2]
+
+kpid = ()
+{ while (! ~ $#filelist 0) {
+	fd = $filelist(1)
+	shift filelist
+	
+	let 'k = index(substr(fd, 7), "/")' \
+	    'process = substr(fd, 7, k - 1)' \
+	    'procdir = substr(fd, 1, 7 + k - 1)' \
+	    'file = substr(fd, 7 + k)'
+
+	if (! ~ $process $pid) {
+		let 'fdnode = stat("-u", fd)'
+		for (i in $indexlist) {
+			if (let 'fdnode ^== inodelist(i)') {
+				switch ($file) {
+				case cwd
+					type = d
+
+				case exe
+					type = x
+
+				case root
+					type = r
+					
+				case fd/*
+					type = o
+
+				case *
+					type = -
+					}
+					
+				let 'cmd = procdir ^ cmdline'
+				let 'uid = stat("-o", procdir)'
+				echo $namelist($i) $type $process $uid $cmd
+
+				if (~ $type o) {
+					while (! ~ $filelist 0  &&  ~ $filelist(1) $procdir ^ *)
+						shift filelist
+					}
+
+				if (! ~ $signal '')
+					kpid = ($kpid $process)
+				break;
+				}
+			}
+		}
+	}
+
+  #
+  # Send signals
+  #
+  if (! ~ $signal ''  &&  ! ~ $#kpid 0) {
+  	pidlist = `{ echo $kpid |
+		     awk '{ for (i=1; i<=NF; i++) {
+		     		if (! ($i in seen)) {
+					seen[$i] = 1;
+					print $i
+					}
+		     		}
+			}'
+		     }
+
+	kill -$signal $pidlist
+  	}
+  } |
+awk '
+	BEGIN {
+		FS = ":";
+		FILE = "/etc/passwd";
+		while (getline <FILE > 0) {
+			user[$3] = $1
+			}
+
+		close(FILE);
+		FS = " ";
+		}
+
+	/./ {
+		if ($4 in user)
+			$4 = user[$4];
+
+		print
+		}'
+
+exit 0
+

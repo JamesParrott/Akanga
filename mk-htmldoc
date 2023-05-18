@@ -1,0 +1,44 @@
+#!bin/akanga
+#
+
+#
+# Compile all available manpages to HTML files.
+#
+
+pwd = `{ pwd }
+path = ($pwd/bin $pwd/samples $path)
+
+list = `{ echo $pwd/src/*.1 $pwd/samples/*.1 }
+cd doc
+rm -f *.html  ||  exit 1
+mancc -cl $list
+
+
+#
+# Create a simple index file.
+#
+
+{ for (i in *.html) {
+	if (! ~ $i index.html)
+		echo $i `{ head -1 $i }
+	}
+  } | awk '
+  		BEGIN {
+			print "<TITLE>Table of Contents</TITLE>"
+			print "<PRE>"
+			}
+
+		/./ {
+			gsub(/<[^>]*>/, "", $0);
+			
+			file = $1; word = $2;
+			$1 = $2 = "";
+			sub(/^[ \t]+/, "", $0);
+
+			printf ("<A HREF=\"%s\">%s</A> %s\n", file, word, $0);
+			}
+			
+		END {
+			print "</PRE>";
+			}' >index.html
+

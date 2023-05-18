@@ -1,0 +1,338 @@
+.de SA
+.sp 1
+.in +0.5i
+.DS
+..
+.de SE
+.DE
+.in -0.5i
+.sp 1
+..
+.TH AKANGA 1 "7 August 1999"
+.SH NAME
+akanga \- rc based shell
+.SH SYNOPSIS
+.B akanga
+.RB [ \-eixvldnpo ]
+.RB [ \-c
+.IR command ]
+.RI [ arguments ]
+.SH DESCRIPTION
+.I akanga
+is an
+.IR rc (1)
+based shell.
+For a complete description see that man page.
+This one describes only the additional commands.
+.PP
+New commands have been added to rc to simplify the writing of reliable
+and robust shell programs.
+.SS "Temporary Files"
+The \fBmktemp\fR command creates temporary files as they are needed.
+These filenames are usually unique but \fBmktemp\fR doesn't verify this.
+The filename generation scheme suggets that if such a file already exists
+it's out of age.
+.br
+Normally the temporary files are automatically removed when the shell
+terminates.
+It does this using an \fIatexit\fR(3) handler.
+There are however situations where this doesn't work, e.g. when the shell
+is terminated with the \fBexec\fR command or inside ``inline subshells''.
+.SS Lockfiles
+Lockfiles generated with \fBlock\fR are also removed on exit of the shell
+if they still exist.
+There are however the same restrictions for lockfiles as for temporary files.
+.br
+\fBlock\fR uses the \fBopen\fR(3) system call with a special parameter
+combination.
+This system call is usually atomic and if it is it's reliable that there
+is no second process succeding in creating the lock the same time.
+.SS "Reading Standard Input"
+The \fBread\fR command is alomost compatible to the one found in other
+shells like e.g. \fIbash\fR(1).
+But notice that it cannot be used with redirection as in
+.SA
+read uptime idletime </proc/uptime
+.SE
+because \fIrc\fR forks each time it's sees input/ouput redirection.
+\fBread\fR would work in that constellation but set the variables in
+a subshell.
+.br
+The \fBread\fR command can also create an array variable as in
+.SA
+read -n args
+.SE
+This will read the next line, split it completly into it's parts using
+\fB$ifs\fR and create one element in \fBargs\fR for each part.
+.sp
+File input with the \fBread\fR command is buffered and once reading from
+standard input has started there might be some amount of data in the
+internal buffer.
+For this reason standard input won't be passed completly to subprocesses
+like in
+.SA
+read firstline
+.br
+awk '{ print }'
+.SE
+In this example \fBawk\fR receives only the part of the standard input
+that hasn't already been read or buffered by the shell program.
+.br
+To solve this problem the \fBread\fR command can be called with only
+a dash ``-'' as argument.
+In this case the internal buffer and the unread data is written to the
+standard output.
+.SA
+read firstline
+.br
+read - | awk '{ print }'
+.SE
+works as expected.
+.SS "Reading Configuration Data"
+\fBreadvars\fR reads assignment from it's input.
+E.g.
+.SA
+readvars var. <<--
+.br
+x = Variable with assignment character.
+.br
+y  One without.
+.br
+--
+.SE
+would define two variables, $\fB(var.x)\fR and $\fB(var.y)\fR.
+\fBreadvars\fR takes the first word from each line, puts a prefix infront
+to get the variable name and assigns the remainder of the line as it's value.
+The assignment character ``='' is optional but can be made mandantory with
+the \fb-d\fR option.
+Variable name, assignment character and value may be surrounded by white space
+like in
+.SA
+readvars -d : cpu. /proc/cpuinfo
+.SE
+Notice that variable names that contain a ``.'' have to be quoted like
+$\fB(var.x)\fR or $\fB'var.y'\fR.
+.br
+The $() construct is nice to read but doesn't work under all circumstances.
+If a function is exported into the environment it's stored without the
+parentheses and reading it later from the environment again, e.g. in
+a subshell, will access different code.
+.PP
+The \fBreadvars\fR command is useful when a configuration file has to be
+read where usually the dot command ``.'' would have been used.
+In opposite to this \fBreadvars\fR accepts only assignments and not
+accidently inserted commands.
+.PP
+Another way to store configuration settings is to store them in one file
+that contains different sections like in
+.SA
+[localhost]
+.br
+address = 127.0.0.1
+.br
+pop3login = myAccount
+.br
+pop3passwd = myPasswd
+.sp
+[pop3server]
+.br
+address = pop.server.tld
+.br
+pop3login = anotherAccount
+.br
+pop3passwd = anotherPasswd
+.SE
+If the example data above is stored in the file /etc/pop3.conf the
+localhost section can be read with
+.SA
+readconf config. /etc/pop3.conf localhost
+.SE
+\fBreadconf\fR creates the variables $'config.address', $'config.pop3login'
+and $'config.pop3passwd'.
+.SS "Initializing Variables"
+One difference between \fIrc\fR and \fIbash\fR is that
+.SA
+x=''
+.br
+rc -c 'echo $#*' $x
+.SE
+prints ``1'' and the analog example with \fIbash\fR echos ``0''.
+So even if a variable is empty in \fIrc\fR it is an argument - as long
+the variable is initialized.
+If in the previous example \fB$x\fR wouldn't have been initialized with an
+empty string \fIrc\fR would also have echoed ``0''.
+.br
+The \fBinitvars\fR command initializes a list of variables with a given
+value if they aren't already set.
+The empty string counts as ``set'' in this context.
+.sp
+The initialization of variables is also important when variables are read
+with \fBreadvars\fR or \fBreadconf\fR and the set of configured variables is
+not known in advance.
+.SS "Arithmetic Expressions"
+The \fBexpr\fR and \fBlet\fR command are a substitute for the external
+\fIexpr\fR(1) and the builtin \fBlet\fR and \fBtest\fR known from other
+shells.
+With a modified \fIrc\fR grammer arithmetic substitution becomes also
+available:
+.SA
+$:\fIexpr\fR
+.SE
+returns the result if \fIexpr\fR.
+For a complete description see \fIakangaexpr\fR(1).
+.SH COMMANDS
+The following commands have been added to \fIrc\fR.
+.TP
+\fBexpr\fR [\fB-n\fR|\fB-e\fR] \fIexpression\fR \fI...\fR
+Evaluates each of the given \fIexpressions\fR and prints their result.
+For a description of the expression syntax see
+.IR akangaexpr (1).
+.TP
+\fBinitvars\fR [\fB-s\fR] \fIvalue\fR \fIvar\fR [\fIvar2\fR \fI...\fR]
+Checks if each of the given variables is defined (the empty string is
+a defined value) and assigns \fIvalue\fR if not.
+If \fB-s\fR is given \fIvalue\fR the check is omitted and \fIvalue\fR
+is assigned to each \fIvar\fR.
+.TP
+\fBlet\fR [\fB-n\fR|\fB-e\fR] \fIexpression\fR \fI...\fR
+Similiar to \fBexpr\fR: evaluates each of the given \fIexpressions\fR
+but doesn't print their results.
+See
+.IR akangaexpr (1)
+for a description of the expression syntax.
+.TP
+\fBlock\fR [\fB-s\fR \fIstale\fR] [\fB-w\fR \fIwait\fR] \fIfilename\fR
+Creates a lockfile with the name ``\fIfilename\fR.lock''.
+If a file with this name already exists and if it's older than \fIstale\fR
+seconds (default 300) it will be ignored and removed. 
+Otherwise \fIakanga\fR will wait \fIwait\fR seconds (default 30)
+for the lockfile to disappear.
+If the lockfile still exists after waiting \fIakanga\fR fails returning
+an error code.
+.TP
+\fBmktemp \fIvar\fR [\fIvar2\fR] [\fI...\fR]
+Creates an unique temporary filename for each variable name \fIvar\fR
+and assigns the filename to the corresponding variable.
+Variable names may be prefixed with a \fB\-\fR.
+In this case the file is created in the current directory and not in /tmp.
+.br
+\fBmktemp\fR uses the value of the \fBtmpprefix\fR variable to put it into
+the name of the temporary file if the variable is set.
+.br
+After a filename is generated \fBmktemp\fR checks if a file with this
+name already exists.
+If \fBmktemp\fR finds one it tries to remove it and returns an error if it
+cannot remove one of the already existing files.
+.br
+The temporary files created with \fBmktemp\fR are usually automatically
+removed when \fIakanga\fR terminates but see section about temporary files
+above.
+.TP
+\fBparseopt\fR \fIvar\fR \fIoptstring\fR \fIparameters\fR
+Similiar to \fBgetopt\fR(1), reorders option strings
+from \fIoptstring\fR and \fIparameters\fR for easy shell parsing
+and assigns the resulting list to \fIvar\fR.
+\fIoptstring\fR enumerates the option letters.
+If an option letter is followed by a ``:'' this option has a
+parameter that follows the option immediatly in $\fIvar\fR.
+When processing the parameters an argument starting with a ``-''
+is completly interpreted as option list, no option argument is
+taken from it.
+The following parameter list return the same $x:
+.sp 1
+.in +0.5i
+parseopt x abc:d -a -b -c 'Hello World!' -d AB
+.br
+parseopt x abc:d -abcd 'Hello World!' AB
+.br
+parseopt x abc:d -ab -cd 'Hello World!' AB
+.sp 1
+.in -0.5i
+which is equivalent to
+.in +0.5i
+.sp 1
+-a -b -c 'Hello World!' -d -- AB
+.sp 1
+.in -0.5i
+Interpretation of the \fIparameters\fR stops if a non-option
+argument is recognized or the argument is either ``-'' or ``--''.
+If ``--'' is found in the parameter list no additional ``--'' is
+inserted into \fIvar\fR.
+``*'' can be used for \fIvar\fR but it has to be quoted.
+\fBparseopt\fR needs no special handling for arguments containing
+white space.
+.TP
+\fBread\fR \fIvar\fR [\fIvar2\fR ...]
+Reads a line from the standard input and splits it into parts
+using the characters found in $ifs. The first part is
+assigned to the first variable \fIvar\fR and so on until the last
+variable is reached which recieves the unprocessed remainder of the
+line.
+.TP
+\fBread\fR \fB-n\fR \fIvar\fR
+Is similiar to the read above but instead of assigning the input to
+named variables the input line is splitted into it's part using $ifs
+and assigned to \fIvar\fR creating an array.
+.TP
+\fBread\fR \fB-\fR
+The third version of \fIread\fR doesn't read anything into variables.
+File input is buffered and once input processing with \fIread\fR has
+been done there is an amount of buffered data that isn't inherited to
+subprocesses.
+This version of \fIread\fR writes the input buffer and all remaining
+data on the input to the standard output.
+.TP
+\fBreadconf\fR \fIprefix\fR \fIconfigfile\fR [\fIsection ...\fR]
+reads the set of configuration values found in section \fIsection\fR in the
+configuration file \fIconfigfile\fR.
+The variable names are made of the \fIprefix\fR and the variable name
+in the assignment.
+.br
+If more than one \fIsection\fR is given on the command line \fBreadconf\fR
+ignores the \fIprefix\fR argument and uses the section name for it.
+If no section name is given \fBreadconf\fR read all sections from
+\fIconfigfile\fR.
+.TP
+\fBreadvars\fR [\fB-d\fR \fIdelim\fR] [\fIprefix\fR [\fIfilename\fR]]
+reads a set of variable assignments of the form
+.sp 1
+.in +0.5i
+\fIvar\fR = \fIvalue\fR
+.in -0.5i
+.sp 1
+from file \fIfilename\fR. Each variable name \fIvar\fR is prefixed with
+\fIprefix\fR. If \fIprefix\fR is not given on the command line \fIrc\fR
+will use ``rv.''.
+The assignment character ``='' is optional.
+Both is changed with the \fB-d\fR option.
+.br
+\fIfilename\fR can be a filename in which case the whole file is read.
+If \fIfilename\fR is missing \fIrc\fR reads it's standard input until
+the end of file is reached.
+If \fIfilename\fR is \fI-\fR the standard input is read until an empty
+line is found in the input skipping blank lines infront of an assignment
+block.
+.br
+\fBreadvars\fR doesn't assign lists.
+.TP
+\fBshift\fR \fIvar\fR [\fIn\fR]
+Deletes \fIn\fR elements (default 1) from the beginning of \fIvar\fR
+and shifts the other elements down by \fIn\fR.
+.br
+Both version of \fBshift\fR are distinguished by the first argument
+to \fBshift\fR.
+If it is a number the standard shift is used 
+.TP
+\fBunlock\fR \fIfile\fR [\fIfile2 ...\fR]
+Removes the previously placed locks for the given files.
+.SH CREDITS
+.I rc
+was written by Byron Rakitzis, with valuable help
+from Paul Haahr, Hugh Redelmeier and David Sanderson.
+The design of this shell has been copied from the
+.I rc
+that Tom Duff wrote at Bell Labs.
+.SH "SEE ALSO"
+.IR rc (1),
+.IR akangaexpr (1)
+- description of \fBexpr\fR and \fBlet\fR builtins.

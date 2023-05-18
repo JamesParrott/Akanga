@@ -1,0 +1,59 @@
+#/bin/rc
+#
+
+path = (. $home/.bin /local/bin $path)
+
+fn l { /bin/ls -lF $* }
+fn ls { /bin/ls -CF $* }
+fn cx { chmod +x $* }
+
+fn tag { vi -t $1 }
+
+#
+# cd [<path>]
+#
+# Change to the given <path> of $home if <path> is ommited. But before
+# store the current directory that we can change back with ``cd -''.
+# Also set the command $prompt(1) to show the current working directory.
+#
+fn cd {
+	prev = `{ pwd }  this = '' {
+		if (~ $1 ()) {
+			builtin cd $home  ||  return 1
+		} else if (~ $1 -) {
+			if (~ $previousdir ()) {
+				echo no previous directory >[1=2]
+				return 1
+			} else {
+				builtin cd $previousdir  ||  return 1
+				}
+		} else {
+			builtin cd $1  ||  return 1
+			}
+
+		previousdir = $prev;
+		this = `` ('/' $ifs) { pwd }
+		if (~ $this ()) {
+			this = '/';
+		} else if (~ $#this 1) {
+			this = '/' ^ $this(1)
+		} else if (~ $#this 2) {
+			this = '/' ^ $this(1) ^ '/' ^ $this(2)
+		} else {
+			this = `{ echo $this | awk '{ print $(NF-1) "/" $NF; exit }' }
+			}
+
+		prompt = ('[' ^ $this($#this) ^ '] > ' $promt(2))
+		}
+
+	return 0;
+	}
+		
+
+# Initialize the directory prompt.
+#
+cd .
+
+
+EDITOR = vi
+

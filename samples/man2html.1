@@ -1,0 +1,117 @@
+.de ES
+.sp
+.in +0.5i
+..
+.de EE
+.in -0.5i
+.sp
+..
+.de EX
+.sp
+.in +0.5i
+\\$1
+.in -0.5i
+.sp
+..
+.TH MAN2HTML 1 "16 May 1999"
+.SH NAME
+man2html \- convert manual pages into HTML files
+.SH SYNOPSIS
+\fBman2html\fR [\fIbaseurl\fR [\fImanpage\fR \fI...\fR]]
+.br
+\fBman2html.cgi\fB
+.SH DESCRIPTION
+.I man2html
+takes the output of the \fIman\fR(1) command and converts it into HTML.
+Manpage text in bold or italics is also in bold or italics in the HTML output.
+References to other command appear linked if they are found in the
+\fImanpage\fR list from the command line.
+.br
+If \fIbaseurl\fR is either omitted, empty or ``-'' \fIman2html\fR produces
+links to static files while otherwise the link addresses are made by
+appending the manual page's name to the \fIbaseurl\fR (see below).
+.SS "Output format"
+The HTML output is enclosed in a <PRE>-tag.
+Page headers and footers are generally ommitted, only the header from the
+first page is printed.
+.br
+The HTML file's title is taken from the manual page if the \fBNAME\fR
+section is found within the first 12 lines of the input.
+.SS "Input Format"
+To detect header and footers \fIman2html\fR makes some assumptions about
+the output of the \fIman\fR command.
+The expected number of lines on a page is 66, including six lines of page
+header and 6 lines of page footer.
+If this doesn't match your \fIman\fR output you'll have to change the
+settings at the beginning of the script (\fIman2html\fR is an \fIawk\fR
+script).
+.SS "Referencing Manual Pages"
+Each reference to a manual page found in the input will be linked if the
+manual page if found in the \fImanpage\fR list from the command line.
+If this list is empty every reference will be linked.
+.sp
+In \fBfile-mode\fR (when \fIbaseurl\fR is either omitted, empty or a dash)
+\fIman2html\fR creates links to static files of the form
+.EX "\fIname\fR-\fIsection\fR.html"
+e.g. \fIls\fR(1) would be HREF'ed as \fIls-1.html\fR.
+.sp
+In \fBcgi-mode\fR the name of the manual page is directly appended to
+the \fIbaseurl\fR.
+The section number is separated from the name with a ``+'' which is
+URL-encoded a blank.
+.SS "CGI-Interface"
+\fIman2html.cgi\fR is a CGI-interface for \fIman2html\fR that allows
+retrieving every manpage found on the system, listing manual sections
+and searching in the \fIwhatis\fR(1) database.
+The mode of operation is controlled with the QUERY_STRING that the
+program receives.
+.sp
+.in +0.5i
+.B "Retrieving"
+.br
+The manpage name is appended to the URL like in
+.EX /cgi-bin/man2html.cgi?ls
+It might be followed by a section namuber as in
+.EX /cgi-bin/man2html.cgi?ls+1
+if there are manual pages in more than one section.
+If in this case the section is omitted \fIman2html.cgi\fR return the list
+of available manpages.
+.sp
+.B "Searching"
+.br
+The \fIwhatis\fR(1) database is automatically searched if one of the
+charactes ``\fB.\fR'', ``\fB?\fR'' or ``\fB*\fR'' is found in the
+QUERY_STRING.
+In this case the QUERY_STRING is expected to be a \fIwhatis\fR(1) compatible
+search pattern.
+.EX /cgi-bin/man2html.cgi?ls*
+lists all manpages starting with \fIls\fR.
+.sp
+.B Sections
+.br
+To list the contents of a section the section number is appended to the
+\fIbaseurl\fR:
+.EX /cgi-bin/man2html.cgi?1
+The section number may be followed by a \fIgrep\fR(1) compatible search pattern
+which is then used to select the referenced items.
+.EX /cgi-bin/man2html.cgi?1+^ls
+lists all manual pages from section 1 which description line start with ``ls''.
+.in -0.5i
+.sp
+.SH EXAMPLES
+The following two example invocations
+.ES
+man ls | man2html >ls.html
+.br
+man ls | man2html - >ls.html
+.EE
+produce HTML files with links to other static HTML files for every reference
+found in the manpage.
+.EX "man ls | man2html - -"
+doesn't link anything.
+.EX "man ls | man2html - rm.1"
+links every occurence of a reference to \fIrm\fR(1) to the file
+\fIrm-1.html\fR.
+.SH "SEE ALSO"
+.IR mancc (1).
+

@@ -1,0 +1,79 @@
+
+Version 1.0.7
+- -----------
+
+  * expr, let: strftime() and systime() are new.
+
+  * expr, let: argc() return the number of command line arguments
+    and argv(x) returns the xth argument.
+
+  * mktemp: The variable $tmpprefix can set a common prefix to all
+    filenames that are generated with mktemp.  Do a
+
+    	let 'timprefix = systime() ^ "." ^ pid'
+
+    to get guarented unique filenames.
+
+  * passwdgen: Altough not an akanga script it' now also installed
+    under /usr/local/bin because there are other akanga scripts
+    where it's useful to have this utility.  Notice that there is
+    no manpage for it.
+    It's function is simple: for each input line you get an almost
+    pronouncable password.  You can specify a command line parameter
+    to control the length of the passwords (default is 4 units).
+
+  * expr, let: seq() didn't work for negative increments.  Now you
+    can do a
+
+    	; expr 'seq(1, 8, -2)'
+
+
+Version 1.0.6
+- -----------
+
+  * The only thing I added is the -s switch to the initvars command to
+    force the value assignment.
+
+  * There was a bug in the expression evaluation.
+
+
+Version 1.0.5
+- -----------
+
+  * What is akanga?
+    akanga is a rc derived shell interpreter.  It was developed from the
+    release rc-1.5betadev.  akanga is also preconfigured for editline
+    support and comes with the sorces for it.
+
+
+  * What is the difference between rc and akanga?
+    akanga has additional builtin support for
+
+      - Temporary files
+      - File locking
+      - Reading standard input
+      - Reading configuration files
+      - Arithmetic expression evaluation
+
+    They are meant to support better programming support.  See akanga(1)
+    and akangaexpr(1) for further information.
+
+
+  * How do I compile it?
+    You can try a ``make'' in the main directory.  This will produce
+    a good number of compilation messages.  Ignore them if you don't
+    get errors.  If it works you'll get the stripped akanga binary in
+    the bin directory.   Copy it to /bin.
+
+
+  * Installing akanga and samples.
+    The makefile contains an ``install'' target that copies akanga
+    to /bin the sample scripts to /usr/local/bin and all available
+    manpages to /usr/local/man/man1.  You can change the locations
+    in ``copyfiles'' script.
+    This requires a compiled akanga binary in the bin directory.
+
+
+  * How do I use it?
+    The samples directory contains some example script for akanga.
+

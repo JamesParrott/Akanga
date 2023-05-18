@@ -1,0 +1,13 @@
+
+The rc shell is >> Copyright 1991 Byron Rakitzis << see COPYRIGHT.original
+or src/COPYRIGHT for details.
+
+akanga, as an rc derivate, falls most probably automatically under this
+license.  To make it clear akanga is >> Copyright 1999 Wolfgang Zekoll,
+portions of code Copyright 1999 Byron Rakitzis. <<  akanga may be
+redistributed under the same terms as stated in COPYRIGHT.original.
+
+However there are additional source files.  They are cleary marked as
+additional and, if this is compatible with the above copyright, they
+fall under the GNU General Public License, see GNU.LICENSE for details.
+

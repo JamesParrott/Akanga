@@ -1,0 +1,79 @@
+.de ES
+.sp
+.in +0.5i
+..
+.de EE
+.in -0.5i
+.sp
+..
+.de EX
+.sp
+.in +0.5i
+\\$1
+.in -0.5i
+.sp
+..
+.TH NETUSER 1 "16 May 1999"
+.SH NAME
+netuser \- show processes using TCP/IP sockets
+.SH SYNOPSIS
+\fBnetuser\fR [\fIoptions\fR] \fIport\fR \fI...\fR
+.SH DESCRIPTION
+The function of \fInetuser\fR is similiar to one found in \fIfuser\fR(1).
+It prints port number, process id, user id, the connection's local address,
+and the program of each process having an open TCP/IP connection on
+port \fIport\fR.
+.br
+If \fIport\fR is missing information for every TCP/IP port is reported.
+.SH OPTIONS
+.TP
+.B \-a
+list also sockets in the listen state (server processes waiting for
+connections).
+.TP
+\fB-k\fR \fIsignal\fR
+send each process the signal \fIsignal\fR.
+.TP
+\fB-l\fR \fIpidlist\fR
+restrict output to the comma separated \fIpidlist\fR.
+.TP
+.B \-n
+replace the port number with their names found in \fI/etc/services\fR.
+.TP
+.B \-p
+print only a list of the port numbers.
+.TP
+.B \-s
+report only sockets in the listen state.
+.TP
+.B \-u
+report UDP instead of TCP ports.
+.PP
+.SH "EXAMPLES"
+The following example lists all processes handling an incoming SMTP connection.
+.EX "netuser 25"
+If the \fB-k\fR option would have been added
+.EX "netuser -k 15 25"
+these processes would also be terminiated.
+The next example
+.EX "netuser -ak 9 25"
+would terminate immediatly all incoming connections and the server process
+listening on port 25.
+A simple
+.EX netuser
+lists all processes having active connections, while
+.EX "netuser -p"
+lists only the port numbers.
+.br
+To get a listing of all openend server ports
+.EX "netuser -ps"
+can be used.
+.SH BUGS
+\fInetuser\fR uses information found in the \fI/proc\fR(5) filesystem. So
+the process command line may not be correct if the command manipulates it
+(e.g. \fIsendmail\fR).
+.SH "SEE ALSO"
+.IR akanga (1),
+.IR fileuser (1),
+.IR proc (5).
+

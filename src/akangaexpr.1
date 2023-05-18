@@ -1,0 +1,295 @@
+.TH AKANGAEXPR 1 "7 August 1999"
+.SH NAME
+expr \- evaluate expressions in akanga
+.SH SYNOPSIS
+.B expr
+.RB [ \-e ]
+.RI [ expr ... ]
+.SH DESCRIPTION
+The
+.I expr
+command evaluates arithmetic expressions in
+.IR akanga (1),
+similiar to the external
+.IR expr (1).
+Each given expression is evaluated and, if the
+.B -e
+option is given, the result of it is printed.
+.P
+The value of the last expression defines the exit code: If it's
+value is 0 the exit code is 1 and 0 otherwise.
+.SH OPERANDS
+.I expr
+accepts numbers and strings as operands, operands are coerced to the
+data types an operator expects.
+Numbers may begin with \fB0x\fR of a \fB0\fR in which case the number
+is interpreted as hexadecimal or octal number.
+Otherwise
+.I expr
+expects numbers to of the form \fIbase\fB#\fInumber\fR.
+.PP
+Strings are usually quoted with double quotes ``\fB"\fR'' but you may
+use single quotes ``\fB'\fR'' as well. Within a quoted string
+.I expr
+recognizes the following escape sequences:
+.TP
+.B \e\fIooo\fR
+the character in octal representation
+.TP
+.B \e0x\fIhh\fR
+the character in hexadecimal representation
+.TP
+.B \en
+newline
+.TP
+.B \et
+tabulator
+.PP
+Usually the expression arguments given to
+.I expr
+will be enclosed in single quotes, so I don't expect much confusion with
+that backslash quoting.
+.I expr
+won't place the characters 0x00 or 0x01 inside a string.
+These characters are silently dropped.
+.PP
+Indexed and non-indexed shell variables are accepted on both sides of an
+assignment.
+Indices may be given with either \fB()\fR or \fB[]\fR but if parentheses are
+used the variable name is first matched again function names.
+Accessing an non-existing index prints an error message.
+If a non-indexed variable is a list,
+.I expr
+uses the flat string representation of that list.
+.I expr
+does not work on lists.
+.SS Wildcards
+The match operator \fB~\fR and the \fBglob()\fR function use the usual
+wildcard characters ``\fB*\fR'', ``\fB?\fR'' and ``\fB[\fR'' for
+pattern matching.
+These wildcard characters cannot be quoted to use them literally in the
+pattern.
+This would reintroduce input reinterpretation to the current version of
+\fBexpr\fR.
+\fBexpr\fR should work with strings as found in \fBakanga\fR instead but
+actually it doesn't.
+.SH OPERATORS
+The following operators are built into
+.IR expr ,
+the list shows the operators in group of equal precedence in order of
+decreasing precedence.
+.TP
+.B var #var var[] var()
+variable, number of elements and indexed array variable
+.TP
+.B ( )
+expression grouping
+.TP
+.B + - ! ~
+unary plus and minus, logical not and binary invert
+.TP
+.B * / % ~|
+multiplication, division, modulo and binary xor
+.TP
+.B + -
+addition and subtraction
+.TP
+.B ^
+string concatenation
+.TP
+.B ^~
+string wildcard match
+.TP
+.B << >>
+left and right shift
+.TP
+.B ^== ^!= ^>= ^> ^< ^<=
+equality, inequality, greater or equal, greater, less and less or equal
+string comparisions
+.TP
+.B == != >= > < <=
+equality, inequality, greater or equal, greater, less and less or equal
+numeric comparisions
+.TP
+.B && &
+logical and, binary and
+.TP
+.B || |
+logical or, binary and
+.TP
+.B ? :
+conditional expression
+.TP
+.B ,
+sequential execution
+.TP
+.B =
+assignment
+.PP
+The operators behave as in other languages like C or
+.IR awk (1).
+Operands with higher precedence are computed first and parentheses can
+be used to group expressions.
+.SH FUNCTIONS
+.TP
+.B argc()
+returns the number of command line arguments.
+.TP
+.B argv(\fIk\fB)
+returns the \fIk\fR-th command line argument.
+.TP
+.B glob(\fIpattern\fB)
+returns a string listing all filenames matching \fIpattern\fR.
+The filenames are space separated.
+.TP
+.B index(\fIstring\fB, \fIsub\fB)
+returns the postion in \fIstring\fR at which \fIsub\fR starts or 0 if
+\fIsub\fR doesn't appear in \fIstring\fR.
+.TP
+.B rindex(\fIstring\fB, \fIsub\fB)
+returns the rightmost postion in \fIstring\fR at which \fIsub\fR starts or
+0 if \fIsub\fR doesn't appear in \fIstring\fR.
+.TP
+.B seq(\fIstart\fB, \fIend\fB, \fIinc\fB)
+returns a string containing the number sequence beginning from \fIstart\fR
+to \fIend\fR with an increment of \fIinc\fR.
+The sequence stops if in encouters a value greater than \fIend\fR.
+.TP
+.B stat(\fIwhat\fB, \fIfilename\fB)
+returns filesystem information about \fIfile\fR depending on \fIwhat\fR:
+.PP
+.RS
+.PD 0
+.TP
+\-a
+access time of \fIfile\fR.
+.TP
+\-c
+creation time of \fIfile\fR.
+.TP
+\-e
+returns true if \fIfile\fR exists, otherwise false.
+.TP
+\-g
+group id of \fIfile\fR.
+.TP
+\-m
+modification time of \fIfile\fR.
+.TP
+\-o
+owner's user id of \fIfile\fR.
+.TP
+\-p
+file permision of \fIfile\fR as four octal digits.
+.TP
+\-q
+file permision of \fIfile\fR as six octal digits.
+.TP
+\-s
+size in bytes of \fIfile\fR.
+.TP
+\-u
+device and inode of \fIfile\fR.
+.PD
+.PP
+If \fIwhat\fR doesn't match the above list the shell prints
+an error message.
+If \fIfile\fR doesn't exist or the \fBstat\fR(1) call fails for some
+reason (e.g. insuffient permissions) \fBstat\fR return \-1.
+.br
+Access, creation and modication times are returned in number of seconds
+since 1.1.1970.
+.RE
+.TP
+.B strftime(\fIformat\fB, \fItime\fB)
+return the formatted string of the given \fItime\fR (in seconds from
+01 January 1970).
+For a description of \fIformat\fR see \fIstrftime\fR(3).
+If \fItime\fR is `1' the current system's time is used.
+.TP
+.B strlen(\fIstring\fB)
+returns the length of \fIstring\fR.
+.TP
+.B substr(\fIstring\fB, \fIstart\fB [, \fIlen\fB])
+returns the substring from string \fIstring\fR beginning at \fIstart\fR
+with \fIlen\fR characters.
+.TP
+.B systime()
+returns the system time in number of seconds from 1970.
+.TP
+.B test(\fIcondition\fB, \fIfile\fB [, \fIlist\B)
+returns true (1) or false (0) depending on the test condition:
+.PP
+.RS
+.PD 0
+.TP
+\-b
+true if \fIfile\fR is a block device.
+.TP
+\-c
+true if \fIfile\fR is a character device.
+.TP
+\-d
+true if \fIfile\fR is a directory.
+.TP
+\-e
+true if \fIfile\fR exists.
+.TP
+\-f
+true if \fIfile\fR is a regular file.
+.TP
+\-g
+true if \fIfile\fR has it's setgid bit set.
+.TP
+\-k
+true if \fIfile\fR has it's sticky bit set.
+.TP
+\-L
+true if \fIfile\fR is a symbolic link.
+.TP
+\-p
+true if \fIfile\fR is a named pipe.
+.TP
+\-r
+true if \fIfile\fR is readable.
+.TP
+\-s
+true if \fIfile\fR is a non-empty regular file.
+.TP
+\-S
+true if \fIfile\fR is a socket.
+.TP
+\-u
+true if \fIfile\fR has it's setuid bit set.
+.TP
+\-w
+true if \fIfile\fR is writeable.
+.TP
+\-x
+true if \fIfile\fR is executable.
+.TP
+\-O
+true if \fIfile\fR is owned by the effective user id.
+.TP
+\-G
+true if \fIfile\fR is owned by the effective group id.
+.PD
+.PP
+The following binary operations are defined.
+\fIlist\fR may be a space separated list of filenames.
+If any of the files in \fIlist\fR does not exist the expression is false.
+.PP
+.PD 0
+.TP
+\-nt is true is \fIfile\fR is newer than each file in \fIlist\fR.
+.TP
+\-ot is true if \fIfile\fR is older than each file in \fIlist\fR.
+.PD
+.PP
+If any other test condition is given the shell terminates with
+an error message.
+.RE
+.SH "SEE ALSO"
+.IR rc (1),
+.IR akanga (1).
+

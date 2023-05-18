@@ -1,0 +1,17 @@
+
+Begin3
+Title:		akanga
+Version:	1.0.7
+Entered-date:	11 SEPTEMBER 1999
+Description:	rc based shell with additions for file locking, temporary
+		files, reading standard input, expr and let builtin.
+Keywords:	shell, shell programming
+Author:		wzk@quietsche-entchen.de.de (Wolfgang Zekoll)
+Maintained-by:	wzk@quietsche-entchen.de.de (Wolfgang Zekoll)
+Primary-site:
+Alternate-site:
+Original-site:
+Platforms:
+Copying-policy:	GPL
+End
+

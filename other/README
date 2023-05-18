@@ -1,0 +1,32 @@
+
+  This directory contains some additional stuff for rc/akanga.
+
+  rdk		Two functions to simplify the development of rc/akanga
+  		functions.  It must be loaded with the ``.'' command:
+
+		  . rdk
+
+		This defines two functions:
+
+		  edit [<file>]		loads <file> into your text editor.
+		  			If you finish editing the edit
+					function tries to determine if the
+					contents of <file> can be loaded into
+					the rc shell.  If yes it asks if you
+					want to reload the contents of <file>
+					with the ``.'' command otherwise it
+					asks if you want to reedit <file>.
+
+		  load [<var>] <file>	is used internally by edit.
+
+		The intended purpose of the edit function is to speed up the
+		'edit file, load file, "oh, another error"' cycle when I'm
+		editing functions.
+		rdk makes use of the mktemp builtin found only in akanga,
+		but not in rc.
+
+  rc-environ	A sample .rcrc file.
+  
+  passwdgen	An awk script that generates passwords that are
+  		almost readable.
+

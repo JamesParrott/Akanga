@@ -1,0 +1,289 @@
+#!/usr/bin/gawk -f
+#
+# man2html <baseurl> [<other> ...]
+#
+#	Read man output from the command line and format it into HTML.
+#
+#	The <baseurl> parameter can be a URL to a CGI script on a
+#	HTTP server or ``-'' to show that we link to static pages.
+#
+#
+#    Examples:
+#
+#	man ls | man2html >out.html
+#	    produces links for every reference found in the man page to a
+#	    static HTML file.
+#
+#	man ls | man2html - >out.html
+#	    Does the same.
+#
+#	man ls | man2html - - >out.html
+#	    produces HTML output without any links to other pages.
+#
+#	man ls | man2html - rm.1 >out.html
+#	    produces HTML output linking only references to rm(1) as rm-1.html.
+#
+
+BEGIN {
+	#
+	# First set some magic variables. These settings may differ
+	# from yours.
+	#
+	
+	# Pagelength used by man:
+	pagelength = 66;
+	
+	# Number of lines before text from top of page:
+	header = 6;
+
+	# Number of lines behind text to end of page:
+	footer = 6;
+
+
+	#
+	# Now we initialize some line/page counters.
+	#
+	pageno = 1;
+	lineno = 0;
+
+
+	#
+	# Read the command line parameters: first there's the base URL.
+	# When we work in the CGI environ this is the pointer to the
+	# CGI-script.
+	#
+	k = 1;
+	baseurl = ARGV[k];
+	ARGV[k++] = "";
+
+	#
+	# There may also be a list of manpages we will reference with
+	# a <A HREF="...">.
+	#
+	havelist = 0;
+	if (k < ARGC) {
+		havelist = 1;
+		for (i=k; i < ARGC; i++) {
+			page = ARGV[i];
+			ARGV[i] = "";
+			reference[page] = 1;
+			}
+		}
+
+
+	rap = rac = 0;
+	while ((line = readahead()) != "\032") {
+		if (rac > 12)
+			break;
+
+		gsub(/.\010/, "", line);
+		if (substr(line, 1, 4) == "NAME") {
+			title = "";
+			while ((line = readahead()) != "\032"  &&  line != "")
+				title = title " " line;
+
+			sub(/^[ \t]+/, "", title);
+			gsub(/[ \t]+/, " ", title);
+			sub(/[ \t]+$/, "", title);
+			printf ("<TITLE>%s</TITLE>\n", title);
+			printf ("\n");
+
+			break;
+			}
+		}
+		
+
+	#
+	# HTML code is preformatted.
+	#
+	print "<PRE>";
+
+	emptylines = -1;
+	while ((line = readline()) != "\032") {
+		lineno++;
+		indent = match(line, /[^ \t]/);
+
+		#
+		# Is this line on a different page than the last?
+		#
+		if (lineno > pagelength) {
+			lineno = 1;
+			pageno++;
+			}
+
+		#
+		# Are we inside a page header on page 2 or later? If yes
+		# we skip that header.
+		#
+		if (lineno <= header  &&  pageno > 1)
+			continue;
+
+
+		#
+		# Is this the first line on a new page? If yes we have
+		# to do a special hack: nroff doesn't insert a blank line
+		# into a page break where usually should be one. We look
+		# at the line indentation to determine if there probably
+		# should be one.
+		#
+		if (lineno == header + 1) {
+			if (indent != 0  &&  previndent != 0  &&  indent != previndent)
+				print "";
+			}
+
+
+		#
+		# Are we inside a page footer?
+		#
+		if (lineno >= (pagelength - footer))
+			continue;
+
+
+		#
+		# Is this an blank line?  If a line is blank and it is followed
+		# by more these are buffered and only printed if the block of
+		# blank lines is followed by some real output.  This is to
+		# avoid the empty lines on the last manual page.
+		#
+		if (line == "") {
+			if (emptylines >= 0) {
+				emptylines++;
+				continue;
+				}
+			else {
+				print "";
+				emptylines = 0;
+				continue;
+				}
+			}
+		else if (emptylines > 0) {
+#printf ("\n##(%d) >>%s<<\n", emptylines, line);
+			for (i=0; i<emptylines; i++)
+				print "";
+			}
+
+		emptylines = -1; 
+
+
+
+		#
+		# Translate ``_^Hc'' into ``<I>c</I>'' - because we can translate
+		# the special HTML characters later we use \001 and \002 for < and >.
+		# We'll substitute it later.
+		#
+		while (match(line, /(_\010[^_])+/) > 0) {
+			italics = substr(line, RSTART, RLENGTH);
+			gsub(/_\010/, "", italics);
+			line = substr(line, 1, RSTART - 1) "\001I\002" italics "\001/I\002" substr(line, RSTART + RLENGTH);
+			}
+			
+		#
+		# Translate ``c^Hc'' into ``<B>c</B>''
+		#
+		while (match(line, /(.\010.)+/) > 0) {
+			bold = substr(line, RSTART, RLENGTH);
+			gsub(/.\010/, "", bold);
+			line = substr(line, 1, RSTART - 1) "\001B\002" bold "\001/B\002" substr(line, RSTART + RLENGTH);
+			}
+			
+
+		#
+		# Translate special characters: & < >
+		#
+		gsub(/&/, "\\&amp;", line);
+		gsub(/</, "\\&lt;", line);
+		gsub(/>/, "\\&gt;", line);
+
+
+		#
+		# Now look for references to other man pages: a reference
+		# starts with either bold or italic text and it immediatly
+		# followed by the pattern ``(.)'' in plain text.
+		# Sometimes the section references is also in italics or bold.
+		#
+		while (match(line, /\001B\002[^\001\002]+\001\/B\002\(.\)/)  ||
+		       match(line, /\001I\002[^\001\002]+\001\/I\002\(.\)/)  ||
+		       match(line, /\001B\002[^\001\002]+\(.\)\001\/B\002/)  ||
+		       match(line, /\001I\002[^\001\002]+\(.\)\001\/I\002/)) {
+			text = href = substr(line, RSTART, RLENGTH);
+			gsub(/\001[^\002]+\002/, "", href);
+			sub(/\(/, "+", href);
+			sub(/\)/, "", href);
+
+			#
+			# Get the manpage name.
+			#
+			manpage = href;
+			sub(/\+/, ".", manpage);
+
+			#
+			# Check if we have a reference list and if yes if the
+			# manpage is on it.
+			#
+			putlink = (havelist == 0  ||  (manpage in reference))? 1: 0;
+
+			#
+			# Now compute the reference. We accept ``'', ``-'',
+			# and ``-cc'' as baseurl as flag to signal that we
+			# should reference static HTML files.
+			#
+			if (putlink == 0) {
+				#
+				# Supply a dummy anchor for line reconstruction.
+				#
+				anchor = text;
+				}
+			else if (baseurl == ""  ||  baseurl == "-"  ||  baseurl == "-cc") {
+				#
+				# Create the HTML filename.
+				#
+				gsub(/\./, "-", manpage);
+				manpage = manpage ".html";
+				anchor = "\001A HREF=\"" manpage "\"\002" text "\001/A\002";
+				}
+			else {
+				anchor = "\001A HREF=\"" baseurl href "\"\002" text "\001/A\002";
+				}
+			
+			#
+			# To prevent endless loops the substitute \001 and \002
+			# with the real characters.
+			#
+			gsub(/\001/, "<", anchor);
+			gsub(/\002/, ">", anchor);
+
+			line = substr(line, 1, RSTART - 1) anchor substr(line, RSTART + RLENGTH);
+			}
+			
+		#
+		# Translate remaining \001's and \002's
+		#
+		gsub(/\001/, "<", line);
+		gsub(/\002/, ">", line);
+
+		print line
+		previndent = indent;
+		}
+	
+	print "</PRE>";
+	}
+
+
+function readahead() {
+	if (getline thisline > 0) {
+		ral[rac++] = thisline;
+		return (thisline);
+		}
+	
+	return ("\032");
+	}
+
+function readline() {
+	if (rap < rac)
+		return (ral[rap++]);
+	else if (getline thisline > 0)
+		return (thisline);
+	
+	return ("\032");
+	}
+

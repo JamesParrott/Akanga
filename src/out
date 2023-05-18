@@ -1,0 +1,7 @@
+
+text = Hello World!
+
+[ip]
+ipnum = 194.77.140.12
+netmask = 255.255.255.248
+

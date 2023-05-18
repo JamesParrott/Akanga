@@ -1,0 +1,13 @@
+#!bin/akanga
+#
+
+cp -av bin/akanga /bin
+cp -av src/*.1 /usr/local/man/man1
+
+cp -av `{ find samples -type f -perm +111 } /usr/local/bin
+cp -av other/passwdgen /usr/local/bin
+
+cp -av samples/*.1 /usr/local/man/man1
+
+echo ok.
+

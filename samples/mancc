@@ -1,0 +1,138 @@
+#!/bin/akanga -p
+#
+
+outputdir = .
+
+
+initvars '' opt_update opt_mancc opt_clearlist opt_force opt_redo opt_useman
+parseopt '*' acflmo:ru $*  ||  exit 1
+
+while (~ $1 -*) {
+	switch ($1) {
+	case -a
+		opt_redo = yes
+		opt_force = yes
+		shift
+
+	case -c
+		opt_clearlist = yes
+		shift
+
+	case -f
+		opt_force = yes
+		shift
+
+	case -l
+		opt_manlist = yes
+		shift
+
+	case -m
+		opt_useman = yes
+		shift
+
+	case -o
+		outputdir = $2
+		shift 2
+
+	case -r
+		opt_redo = yes
+		shift
+
+	case -u
+		opt_update = yes
+		shift
+
+	case - --
+		shift
+		break;
+		}
+	}
+
+if (let 'test("-d", outputdir) == 0') {
+	echo $0: not a directory: $outputdir >[1=2]
+	exit 1
+	}
+
+manlist = $outputdir/.mancc
+
+if (~ $opt_clearlist yes)
+	rm $manlist
+
+
+if (~ $opt_redo yes) {
+	if (! ~ $#* 0) {
+		echo $0: unexpected arguments: $* >[1=2]
+		exit 1
+	} else if (let 'test("-f", manlist) == 0') {
+		echo $0: no such file: $manlist >[1=2]
+		exit 1
+		}
+
+	opt_update = yes
+	list = `{ cat $manlist }
+} else {
+	list = $*
+	}
+
+
+if (~ $opt_force yes)
+	opt_update = ''
+
+
+manpages = `{ echo $list |
+	      awk '/./ { for (i=1; i<=NF; i++) { n = split($i, p, "/"); print p[n] } }' }
+
+for (i in $list) {
+	target = `{ echo $i |
+		    awk '{ n = split($1, x, "/"); sub(/\./, "-", x[n]); print x[n] ".html"; exit }' }
+	if (! ~ $outputdir .)
+		target = $outputdir ^ / ^ $target
+
+	echo -n $i '-->' $target '... '
+	if (let 'test("-f", i) == 0') {
+		if (! ~ $opt_useman yes) {
+			echo file not found: $i >[1=2]
+		} else {
+			mp = ``($ifs .) { echo $i }
+			if (! ~ $#mp 2) {
+				echo incomplete manpage specifiation: $i >[1=2]
+			} else {
+				mktemp manpage
+
+				echo 'using system manual page' >[1=2]
+				if (man $mp(2) $mp(1) >$manpage) {
+					man2html - $manpages <$manpage >$target
+					sourcelist = ($sourcelist $i)
+					}
+				}
+			}
+	} else if (~ $opt_update yes  &&  let 'test("-nt", target, i)') {
+		echo $target is up to date >[1=2]
+	} else {
+		man -l $i | man2html - $manpages >$target
+		sourcelist = ($sourcelist $i)
+		}
+	}
+
+
+if (~ $opt_manlist yes) {
+	echo updating .mancc ... >[1=2]
+
+	mktemp newsource
+	touch $manlist
+
+	{ echo $sourcelist; cat $manlist } |
+	awk '{
+		for (i=1; i<=NF; i++) {
+			if (! ($i in seen)) {
+				seen[$i] = 1;
+				print $i;
+				}
+			}
+		}' | sort >$newsource
+
+	mv $newsource $manlist
+	}
+
+exit
+

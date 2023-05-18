@@ -1,0 +1,79 @@
+#!/bin/akanga
+#
+# lp [<options>] <prog> ...
+#
+#	Anzeige aller Prozesse von <prog>. Fuer <prog> darf nur der
+#	Programmname (ohne Verzeichnis) angegeben werden.
+#
+#	Optionen:
+#	  -k <signal>		An jeden Prozess wird <signal> geschickt.
+#
+
+initvars '' signal
+parseopt '*' k: $*
+
+while (~ $1 -*) {
+	switch ($1) {
+	case -k
+		signal = $2
+		shift 2
+		
+	case - --
+		shift
+		break
+		
+	case *
+		echo $0: unknown option: -$1 >[1=2]
+		exit 1
+		}
+	}
+	
+proglist = $*
+
+data = `{ cat /proc/[0-9]*/stat | awk '{ print $1, $2 }' }
+kpid = ()
+
+{ while (! ~ $#data 0 1) {
+	process = $data(1)
+	prog = $data(2)
+	shift data 2
+
+	for (i in $proglist) {
+		if (~ $prog '(' ^ $i ^ ')') {
+			dir = '/proc/' ^ $process
+			if (let 'test("-d", dir)') {
+				cmdline = `{ cat /proc/$process/cmdline }
+				let 'owner = stat("-o", dir)'
+				echo $process $owner ' ' $cmdline
+
+				kpid = ($kpid $process)
+				}
+			}
+		}
+	}
+
+  if (! ~ $signal ''  &&  ! ~ $kpid ()) {
+  	kill -$signal $kpid
+  	}
+  } |
+awk '
+	BEGIN {
+		FS = ":";
+		FILE = "/etc/passwd";
+		while (getline <FILE > 0) {
+			user[$3] = $1
+			}
+
+		close(FILE);
+		FS = " ";
+		}
+
+	/./ {
+		if ($2 in user)
+			$2 = user[$2];
+
+		print
+		}'
+
+exit 0
+

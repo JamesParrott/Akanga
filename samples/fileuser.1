@@ -1,0 +1,57 @@
+.TH FILEUSER 1 "28 February 1999"
+.SH NAME
+fileuser \- show processes having opened a particular file
+.SH SYNOPSIS
+\fBfileuser\fR [\fIoptions\fR] \fIfile\fR \fI...\fR
+.SH DESCRIPTION
+.I fileuser
+is similiar to \fIfuser\fR(1).
+It prints type of usage, process id, username and command line for
+each process that has one of the given files opened.
+The type of usage is indicated by a single character in the second (space
+separated) output field:
+.br
+.TP
+.B d
+\fIfile\fR is the current working directory of the process.
+.TP
+.B o
+\fIfile\fR is opened as usual file.
+.TP
+.B r
+\fIfile\fR is the root directory of the process.
+.TP
+.B x
+\fIfile\fR is the executable of the process.
+.PP
+By default
+.I fileuser
+looks only for opened files.
+This may be changed with the command line options.
+.SH OPTIONS
+.TP
+.B \-a
+report usage as opened file, executable, working directory or root directory.
+.TP
+.B \-d
+report usage as current directory only.
+.TP
+.B \-e
+report usage as executable only.
+.TP
+\fB\-k\fR \fIsignal\fR
+send each process having one of the given \fIfiles\fR opened the signal
+\fIsignal\fR.
+.TP
+.B \-o
+report usage as opened file only (default setting).
+.TP
+.B \-r
+report usage as root directory only.
+.TP
+.B \-x
+report usage as opened file or executable.
+.SH "SEE ALSO"
+.IR akanga (1),
+.IR netuser (1).
+

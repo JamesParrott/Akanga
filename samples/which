@@ -1,0 +1,73 @@
+#!/bin/akanga -p
+#
+
+initvars '' opt_exitcode opt_list opt_standard
+parseopt '*' els $*  ||  exit 1
+
+while (~ $1 -*) {
+	switch ($1) {
+	case -e
+		opt_exitcode = yes
+		shift
+
+	case -l
+		opt_list = yes
+		shift
+
+	case -s
+		opt_standard = yes
+		shift
+
+	case - --
+		shift
+		break;
+		}
+	}
+
+
+if (~ $#* 0) {
+	echo usage: $0 '<name> [...]' >[1=2]
+	exit 1
+	}
+
+
+list = `{
+		{ for (pattern in $*) {
+			for (dir in $path) {
+				cmd = $dir ^ / ^ $pattern
+
+				for (file in `{ expr 'glob(cmd)' }) {
+					let 'test("-f", file)  &&  test("-x", file)'  &&
+					  echo $file
+					}
+				}
+			}
+		  } | awk '
+				/./ {
+					if (! ($0 in seen)) {
+						seen[$0] = 1;
+						print $0;
+						}
+					}' }
+
+if (~ $#list 0) {
+	exitcode = 1
+} else {
+	exitcode = 0
+	}
+
+
+if (~ $opt_exitcode yes) {
+	exit $exitcode
+} else if (~ $opt_standard yes) {
+	echo $list(1)
+} else if (~ $opt_list yes) {
+	for (i in $list)
+		ls -l $i
+} else {
+	for (i in $list)
+		echo $i
+	}
+
+exit $exitcode
+

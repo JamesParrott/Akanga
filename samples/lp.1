@@ -1,0 +1,17 @@
+.TH LP 1 "16 May 1999"
+.SH NAME
+lp \- list processes
+.SH SYNOPSIS
+\fBlp\fR [\fB-k\fR \fIsignal\fR] \fIprog\fR \fI...\fR
+.SH DESCRIPTION
+.I lp
+prints the process id, username and command line of all \fIprog\fR processes.
+Optionally the processes receive \fIsignal\fR if the \fB-k\fR option
+is specified.
+.sp
+\fIlp\fR uses the \fIcmdline\fR files it finds in the \fIproc\fR(5) filesystem.
+So \fIlp\fR doesn't list processes of \fIprog\fR that manipulate their
+command line like e.g. \fIsendmail\fR.
+.SH "SEE ALSO"
+.IR fileuser (1),
+.IR ps (1).

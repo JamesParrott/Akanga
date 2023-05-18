@@ -1,0 +1,55 @@
+.de ES
+.sp
+.in +0.5i
+..
+.de EE
+.in -0.5i
+.sp
+..
+.de EX
+.sp
+.in +0.5i
+\\$1
+.in -0.5i
+.sp
+..
+.TH WHICH 1 "16 May 1999"
+.SH NAME
+which \- show full path of commands
+.SH SYNOPSIS
+\fBwhich\fR [\fIoptions\fR] \fIprogname\fR \fI...\fR
+.SH DESCRIPTION
+.I which
+prints the full pathname for each \fIprogname\fR.
+It does this by looking in every directory found in the PATH environment
+variable.
+.sp
+In contrast to the standard \fIwhich\fR command this version prints any
+occurence of \fIprogname\fR.
+Furthermore \fIprogname\fR may contain the shell wildcard ``\fB?\fR''
+and ``\fB*\fR''.
+.SH OPTIONS
+The following options are mutually exclusive.
+.TP
+.B -e
+don't print anything, just return an exit code.
+.TP
+.B -l
+do an ``ls -l'' for each occurence of \fIprogname\fR.
+.TP
+.B -s
+print only the first occurence.
+.SH EXAMPLES
+The following does what the usual \fIwhich\fR command also does,
+.EX "which -s ls"
+it prints the location of the \fIls\fR command.
+.EX "which ls"
+looks for the \fIls\fR command in every PATH directory.
+.EX "which 'ls*'"
+lists all command starting with ``ls''.
+.EX "which '*'"
+lists all available commands.
+.SH NOTES
+\fIwhich\fR is an \fIakanga\fR(1) shell script.
+If you are working with \fIbash\fR(1) you'll perhaps to disable the
+\fIwhich\fR alias in \fI/etc/profile\fR.
